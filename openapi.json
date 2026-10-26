@@ -1,0 +1,2517 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Flock Energy — Urja Meter Ops API",
+    "description": "A normalised, documented REST layer over the read-only **Urja Meter Ops** portal.\n\nThe service authenticates with the legacy portal on your behalf, signs and caches the bulk export, repairs messy hierarchy data, converts cumulative meter registers into interval consumption, and exposes stable JSON endpoints.\n\n* Interactive docs: `/docs` (Swagger UI) or `/reference` (Scalar)\n* Raw contract: `/openapi.json`\n* Human dashboard: `/`\n",
+    "contact": {
+      "name": "Flock Energy API take-home"
+    },
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "API index",
+        "operationId": "api_index_api_v1__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Api Index Api V1  Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Meter or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The legacy portal returned an error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The legacy portal is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meters": {
+      "get": {
+        "tags": [
+          "Meters"
+        ],
+        "summary": "List and filter meters",
+        "description": "Backed by the signed bulk export, so filtering happens locally across the whole dataset (unlike the portal's ID/serial-only search). Filters are case-insensitive; status, phase, make, build, dt, feeder and zone accept comma-separated values.",
+        "operationId": "list_meters_api_v1_meters_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Substring across ID, serial, make and hierarchy",
+              "title": "Q"
+            },
+            "description": "Substring across ID, serial, make and hierarchy"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Installed, Faulty, Decommissioned",
+              "title": "Status"
+            },
+            "description": "Installed, Faulty, Decommissioned"
+          },
+          {
+            "name": "phase",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "single or three",
+              "title": "Phase"
+            },
+            "description": "single or three"
+          },
+          {
+            "name": "make",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Make"
+            }
+          },
+          {
+            "name": "build",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "legacy or v2",
+              "title": "Build"
+            },
+            "description": "legacy or v2"
+          },
+          {
+            "name": "dt",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "DT code or name",
+              "title": "Dt"
+            },
+            "description": "DT code or name"
+          },
+          {
+            "name": "feeder",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Feeder code or name",
+              "title": "Feeder"
+            },
+            "description": "Feeder code or name"
+          },
+          {
+            "name": "zone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Zone code or name",
+              "title": "Zone"
+            },
+            "description": "Zone code or name"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^-?(meter_id|serial_number|make|phase_type|install_status|install_type|build|dt_code|zone|feeder)$",
+              "description": "Field, prefix with - for descending",
+              "default": "meter_id",
+              "title": "Sort"
+            },
+            "description": "Field, prefix with - for descending"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 25,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_Meter_"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Meter or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The legacy portal returned an error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The legacy portal is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meters/near": {
+      "get": {
+        "tags": [
+          "Meters"
+        ],
+        "summary": "Find meters near a point",
+        "description": "Haversine search over the dataset's coordinates. This is a local capability the portal lacks.",
+        "operationId": "near_meters_api_v1_meters_near_get",
+        "parameters": [
+          {
+            "name": "latitude",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 90.0,
+              "minimum": -90.0,
+              "description": "Query point latitude",
+              "title": "Latitude"
+            },
+            "description": "Query point latitude"
+          },
+          {
+            "name": "longitude",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 180.0,
+              "minimum": -180.0,
+              "description": "Query point longitude",
+              "title": "Longitude"
+            },
+            "description": "Query point longitude"
+          },
+          {
+            "name": "radius_km",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "maximum": 100.0,
+              "exclusiveMinimum": 0.0,
+              "default": 5.0,
+              "title": "Radius Km"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NearbyMeter"
+                  },
+                  "title": "Response Near Meters Api V1 Meters Near Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Meter or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The legacy portal returned an error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The legacy portal is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meters/{meter_id}": {
+      "get": {
+        "tags": [
+          "Meters"
+        ],
+        "summary": "Get one meter",
+        "description": "Nameplate fields come from the live server-rendered meter page (which uses two different detail schemas); hierarchy and coordinates come from the cached bulk snapshot. If the detail page fails, the cached snapshot is served with a warning.",
+        "operationId": "get_meter_api_v1_meters__meter_id__get",
+        "parameters": [
+          {
+            "name": "meter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$",
+              "examples": [
+                "J100001"
+              ],
+              "title": "Meter Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeterDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Meter or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The legacy portal returned an error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The legacy portal is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meters/{meter_id}/consumption": {
+      "get": {
+        "tags": [
+          "Consumption"
+        ],
+        "summary": "Consumption history",
+        "description": "Returns the portal's readings with cumulative registers converted to typed values and per-interval deltas. Dates are inclusive and optional; omitting both uses the portal's 7-day default window. The portal mixes 30-minute and daily meters, so `granularity` is detected rather than assumed. Timestamps are interpreted as IST.",
+        "operationId": "get_consumption_api_v1_meters__meter_id__consumption_get",
+        "parameters": [
+          {
+            "name": "meter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$",
+              "examples": [
+                "J100001"
+              ],
+              "title": "Meter Id"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inclusive start date (YYYY-MM-DD)",
+              "title": "From"
+            },
+            "description": "Inclusive start date (YYYY-MM-DD)"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inclusive end date (YYYY-MM-DD)",
+              "title": "To"
+            },
+            "description": "Inclusive end date (YYYY-MM-DD)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Readings in the portal's available window",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsumptionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Meter or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The legacy portal returned an error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The legacy portal is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/hierarchy": {
+      "get": {
+        "tags": [
+          "Network"
+        ],
+        "summary": "Reconstructed network hierarchy",
+        "description": "Meters are organised Zone → Circle → Division → Subdivision → Substation → Feeder → DT. The portal reports per-meter paths, not a normalised tree; this endpoint merges blank codes/names, treats the DT registry as authoritative for names, and resolves nodes reported under multiple parents using the most frequent parent. Conflicts and data quality flags are included rather than hidden.",
+        "operationId": "get_hierarchy_api_v1_hierarchy_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HierarchyResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Meter or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The legacy portal returned an error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The legacy portal is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/transformers": {
+      "get": {
+        "tags": [
+          "Network"
+        ],
+        "summary": "Distribution transformers",
+        "description": "The portal's DT registry joined to live meter counts and status breakdowns.",
+        "operationId": "list_transformers_api_v1_transformers_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Code, name or feeder code",
+              "title": "Q"
+            },
+            "description": "Code, name or feeder code"
+          },
+          {
+            "name": "feeder",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Feeder code",
+              "title": "Feeder"
+            },
+            "description": "Feeder code"
+          },
+          {
+            "name": "zone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Zone code or name",
+              "title": "Zone"
+            },
+            "description": "Zone code or name"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 25,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_Transformer_"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Meter or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The legacy portal returned an error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The legacy portal is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/summary": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Dataset summary",
+        "description": "Counts by status, make, phase, build and install type, plus dataset freshness.",
+        "operationId": "get_stats_api_v1_stats_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Meter or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The legacy portal returned an error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The legacy portal is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/export/meters": {
+      "get": {
+        "tags": [
+          "Meters"
+        ],
+        "summary": "Export the full clean dataset",
+        "description": "One JSON document containing every normalised meter. Useful for warehouse loads.",
+        "operationId": "export_meters_api_v1_export_meters_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Meter or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The legacy portal returned an error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The legacy portal is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/export/meters.csv": {
+      "get": {
+        "tags": [
+          "Meters"
+        ],
+        "summary": "Export the full dataset as CSV",
+        "operationId": "export_meters_csv_api_v1_export_meters_csv_get",
+        "responses": {
+          "200": {
+            "description": "Flat CSV, one row per meter",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Meter or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The legacy portal returned an error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The legacy portal is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/status": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Portal session status",
+        "description": "Reports the adapter's local view of the portal session without contacting the portal.",
+        "operationId": "auth_status_api_v1_auth_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Meter or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The legacy portal returned an error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The legacy portal is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Establish a portal session",
+        "description": "Logs in with the server-side configured portal credentials and returns the new session expiry. No credentials are accepted from the caller; the service is a single-tenant adapter and never forwards client-supplied passwords.",
+        "operationId": "auth_login_api_v1_auth_login_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Meter or resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The legacy portal returned an error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The legacy portal is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Ready",
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AuthStatus": {
+        "properties": {
+          "authenticated": {
+            "type": "boolean",
+            "title": "Authenticated"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "portal_base_url": {
+            "type": "string",
+            "title": "Portal Base Url"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "authenticated",
+          "expires_at",
+          "portal_base_url",
+          "checked_at"
+        ],
+        "title": "AuthStatus"
+      },
+      "ConsumptionAnomalies": {
+        "properties": {
+          "register_regressions": {
+            "type": "integer",
+            "title": "Register Regressions",
+            "description": "Negative deltas (meter reset, replacement, or bad data)"
+          },
+          "duplicate_timestamps": {
+            "type": "integer",
+            "title": "Duplicate Timestamps"
+          },
+          "unparsable_readings": {
+            "type": "integer",
+            "title": "Unparsable Readings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "register_regressions",
+          "duplicate_timestamps",
+          "unparsable_readings"
+        ],
+        "title": "ConsumptionAnomalies"
+      },
+      "ConsumptionReading": {
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp",
+            "description": "ISO-8601 timestamp with the portal's assumed timezone offset."
+          },
+          "kwh": {
+            "type": "number",
+            "title": "Kwh",
+            "description": "Cumulative active-energy register (not interval usage)."
+          },
+          "kvah": {
+            "type": "number",
+            "title": "Kvah",
+            "description": "Cumulative apparent-energy register."
+          },
+          "volt_r": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volt R",
+            "description": "R-phase voltage, when reported."
+          },
+          "kwh_delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kwh Delta",
+            "description": "Usage since the previous reading; null for the first reading or after a register reset."
+          },
+          "kvah_delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kvah Delta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "timestamp",
+          "kwh",
+          "kvah",
+          "volt_r",
+          "kwh_delta"
+        ],
+        "title": "ConsumptionReading"
+      },
+      "ConsumptionResponse": {
+        "properties": {
+          "meter_id": {
+            "type": "string",
+            "title": "Meter Id"
+          },
+          "requested_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested From",
+            "description": "Inclusive date filter sent to the portal, if any."
+          },
+          "requested_to": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested To"
+          },
+          "first_reading_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Reading At"
+          },
+          "last_reading_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Reading At"
+          },
+          "granularity": {
+            "type": "string",
+            "enum": [
+              "30min",
+              "daily",
+              "irregular",
+              "empty"
+            ],
+            "title": "Granularity",
+            "description": "Detected interval spacing. The portal mixes 30-minute and daily meters."
+          },
+          "interval_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Minutes",
+            "description": "Median spacing between readings."
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "readings": {
+            "items": {
+              "$ref": "#/components/schemas/ConsumptionReading"
+            },
+            "type": "array",
+            "title": "Readings"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ConsumptionSummary"
+          },
+          "anomalies": {
+            "$ref": "#/components/schemas/ConsumptionAnomalies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "meter_id",
+          "requested_from",
+          "requested_to",
+          "first_reading_at",
+          "last_reading_at",
+          "granularity",
+          "interval_minutes",
+          "count",
+          "readings",
+          "summary",
+          "anomalies"
+        ],
+        "title": "ConsumptionResponse"
+      },
+      "ConsumptionSummary": {
+        "properties": {
+          "kwh_consumed": {
+            "type": "number",
+            "title": "Kwh Consumed",
+            "description": "Sum of positive kWh deltas in the window."
+          },
+          "kvah_consumed": {
+            "type": "number",
+            "title": "Kvah Consumed"
+          },
+          "first_register_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Register Kwh"
+          },
+          "last_register_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Register Kwh"
+          },
+          "average_voltage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Voltage"
+          },
+          "min_voltage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Voltage"
+          },
+          "max_voltage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Voltage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kwh_consumed",
+          "kvah_consumed",
+          "first_register_kwh",
+          "last_register_kwh",
+          "average_voltage",
+          "min_voltage",
+          "max_voltage"
+        ],
+        "title": "ConsumptionSummary"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error",
+          "message"
+        ],
+        "title": "ErrorResponse"
+      },
+      "ExportResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Meter"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "fetched_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fetched At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "total",
+          "fetched_at"
+        ],
+        "title": "ExportResponse"
+      },
+      "GeoPoint": {
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude"
+          }
+        },
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "title": "GeoPoint"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status"
+          },
+          "service": {
+            "type": "string",
+            "title": "Service"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "uptime_seconds": {
+            "type": "number",
+            "title": "Uptime Seconds"
+          },
+          "credentials_configured": {
+            "type": "boolean",
+            "title": "Credentials Configured"
+          },
+          "session": {
+            "$ref": "#/components/schemas/AuthStatus"
+          },
+          "cache": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Cache"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "service",
+          "version",
+          "uptime_seconds",
+          "credentials_configured",
+          "session",
+          "cache"
+        ],
+        "title": "HealthResponse"
+      },
+      "HierarchyConflict": {
+        "properties": {
+          "level": {
+            "type": "string",
+            "title": "Level"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "meter_count": {
+            "type": "integer",
+            "title": "Meter Count"
+          },
+          "reported_parents": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reported Parents"
+          },
+          "chosen_parent": {
+            "type": "string",
+            "title": "Chosen Parent",
+            "description": "Most frequently reported parent; deterministic tie-breaks by id."
+          }
+        },
+        "type": "object",
+        "required": [
+          "level",
+          "id",
+          "name",
+          "meter_count",
+          "reported_parents",
+          "chosen_parent"
+        ],
+        "title": "HierarchyConflict"
+      },
+      "HierarchyNode": {
+        "properties": {
+          "level": {
+            "type": "string",
+            "title": "Level",
+            "description": "zone | circle | division | subdivision | substation | feeder | dt"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Human-readable name. Normalised when the portal leaves it blank."
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code",
+            "description": "Stable-looking code such as C-02, when known."
+          },
+          "data_quality": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Data Quality",
+            "description": "Set when this node required repair or has conflicting source values, e.g. 'code_derived', 'name_derived', 'name_alias', 'missing_in_source'."
+          }
+        },
+        "type": "object",
+        "required": [
+          "level",
+          "name"
+        ],
+        "title": "HierarchyNode",
+        "description": "One level of a meter's network path."
+      },
+      "HierarchyResponse": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "data_fetched_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Data Fetched At"
+          },
+          "total_meters": {
+            "type": "integer",
+            "title": "Total Meters"
+          },
+          "node_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Node Counts"
+          },
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/HierarchyConflict"
+            },
+            "type": "array",
+            "title": "Conflicts"
+          },
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/HierarchyTreeNode"
+            },
+            "type": "array",
+            "title": "Zones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "data_fetched_at",
+          "total_meters",
+          "node_counts",
+          "conflicts",
+          "zones"
+        ],
+        "title": "HierarchyResponse"
+      },
+      "HierarchyTreeNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Stable node id, such as zone:Z-02 or feeder:F-002."
+          },
+          "level": {
+            "type": "string",
+            "title": "Level"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "meter_count": {
+            "type": "integer",
+            "title": "Meter Count",
+            "description": "Meters whose path passes through this node."
+          },
+          "capacity_kva": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity Kva",
+            "description": "Only present on DT nodes."
+          },
+          "data_quality": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Data Quality"
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/HierarchyTreeNode"
+            },
+            "type": "array",
+            "title": "Children"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "level",
+          "name",
+          "code",
+          "meter_count"
+        ],
+        "title": "HierarchyTreeNode"
+      },
+      "Meter": {
+        "properties": {
+          "meter_id": {
+            "type": "string",
+            "title": "Meter Id",
+            "examples": [
+              "J100001"
+            ]
+          },
+          "serial_number": {
+            "type": "string",
+            "title": "Serial Number",
+            "examples": [
+              "GE84132"
+            ]
+          },
+          "make": {
+            "type": "string",
+            "title": "Make",
+            "examples": [
+              "L&T"
+            ]
+          },
+          "phase_type": {
+            "type": "string",
+            "title": "Phase Type",
+            "description": "single or three",
+            "examples": [
+              "single"
+            ]
+          },
+          "install_status": {
+            "type": "string",
+            "title": "Install Status",
+            "description": "Installed, Faulty, Decommissioned (open set)",
+            "examples": [
+              "Installed"
+            ]
+          },
+          "install_type": {
+            "type": "string",
+            "title": "Install Type",
+            "examples": [
+              "CT Operated"
+            ]
+          },
+          "build": {
+            "type": "string",
+            "title": "Build",
+            "description": "Portal data generation, legacy or v2",
+            "examples": [
+              "legacy"
+            ]
+          },
+          "dt_code": {
+            "type": "string",
+            "title": "Dt Code",
+            "examples": [
+              "DT-002"
+            ]
+          },
+          "hierarchy": {
+            "$ref": "#/components/schemas/MeterHierarchy"
+          },
+          "hierarchy_path": {
+            "type": "string",
+            "title": "Hierarchy Path",
+            "description": "Readable breadcrumb with duplicate names collapsed.",
+            "examples": [
+              "Jaipur Zone 2 / Circle 2 / Division 2 / Subdivision 2 / Substation 2 / Feeder 2 / Mansarovar DT 2"
+            ]
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GeoPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "meter_id",
+          "serial_number",
+          "make",
+          "phase_type",
+          "install_status",
+          "install_type",
+          "build",
+          "dt_code",
+          "hierarchy",
+          "hierarchy_path"
+        ],
+        "title": "Meter"
+      },
+      "MeterDetail": {
+        "properties": {
+          "meter_id": {
+            "type": "string",
+            "title": "Meter Id",
+            "examples": [
+              "J100001"
+            ]
+          },
+          "serial_number": {
+            "type": "string",
+            "title": "Serial Number",
+            "examples": [
+              "GE84132"
+            ]
+          },
+          "make": {
+            "type": "string",
+            "title": "Make",
+            "examples": [
+              "L&T"
+            ]
+          },
+          "phase_type": {
+            "type": "string",
+            "title": "Phase Type",
+            "description": "single or three",
+            "examples": [
+              "single"
+            ]
+          },
+          "install_status": {
+            "type": "string",
+            "title": "Install Status",
+            "description": "Installed, Faulty, Decommissioned (open set)",
+            "examples": [
+              "Installed"
+            ]
+          },
+          "install_type": {
+            "type": "string",
+            "title": "Install Type",
+            "examples": [
+              "CT Operated"
+            ]
+          },
+          "build": {
+            "type": "string",
+            "title": "Build",
+            "description": "Portal data generation, legacy or v2",
+            "examples": [
+              "legacy"
+            ]
+          },
+          "dt_code": {
+            "type": "string",
+            "title": "Dt Code",
+            "examples": [
+              "DT-002"
+            ]
+          },
+          "hierarchy": {
+            "$ref": "#/components/schemas/MeterHierarchy"
+          },
+          "hierarchy_path": {
+            "type": "string",
+            "title": "Hierarchy Path",
+            "description": "Readable breadcrumb with duplicate names collapsed.",
+            "examples": [
+              "Jaipur Zone 2 / Circle 2 / Division 2 / Subdivision 2 / Substation 2 / Feeder 2 / Mansarovar DT 2"
+            ]
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GeoPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detail_source": {
+            "type": "string",
+            "enum": [
+              "portal_ssr",
+              "bulk_export_cached"
+            ],
+            "title": "Detail Source",
+            "description": "Where the nameplate fields came from. The single-meter endpoint prefers the live SSR page."
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Observed At",
+            "description": "When the source payload was fetched."
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "meter_id",
+          "serial_number",
+          "make",
+          "phase_type",
+          "install_status",
+          "install_type",
+          "build",
+          "dt_code",
+          "hierarchy",
+          "hierarchy_path",
+          "detail_source",
+          "observed_at"
+        ],
+        "title": "MeterDetail"
+      },
+      "MeterHierarchy": {
+        "properties": {
+          "zone": {
+            "$ref": "#/components/schemas/HierarchyNode"
+          },
+          "circle": {
+            "$ref": "#/components/schemas/HierarchyNode"
+          },
+          "division": {
+            "$ref": "#/components/schemas/HierarchyNode"
+          },
+          "subdivision": {
+            "$ref": "#/components/schemas/HierarchyNode"
+          },
+          "substation": {
+            "$ref": "#/components/schemas/HierarchyNode"
+          },
+          "feeder": {
+            "$ref": "#/components/schemas/HierarchyNode"
+          },
+          "dt": {
+            "$ref": "#/components/schemas/HierarchyNode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "zone",
+          "circle",
+          "division",
+          "subdivision",
+          "substation",
+          "feeder",
+          "dt"
+        ],
+        "title": "MeterHierarchy"
+      },
+      "NearbyMeter": {
+        "properties": {
+          "meter_id": {
+            "type": "string",
+            "title": "Meter Id",
+            "examples": [
+              "J100001"
+            ]
+          },
+          "serial_number": {
+            "type": "string",
+            "title": "Serial Number",
+            "examples": [
+              "GE84132"
+            ]
+          },
+          "make": {
+            "type": "string",
+            "title": "Make",
+            "examples": [
+              "L&T"
+            ]
+          },
+          "phase_type": {
+            "type": "string",
+            "title": "Phase Type",
+            "description": "single or three",
+            "examples": [
+              "single"
+            ]
+          },
+          "install_status": {
+            "type": "string",
+            "title": "Install Status",
+            "description": "Installed, Faulty, Decommissioned (open set)",
+            "examples": [
+              "Installed"
+            ]
+          },
+          "install_type": {
+            "type": "string",
+            "title": "Install Type",
+            "examples": [
+              "CT Operated"
+            ]
+          },
+          "build": {
+            "type": "string",
+            "title": "Build",
+            "description": "Portal data generation, legacy or v2",
+            "examples": [
+              "legacy"
+            ]
+          },
+          "dt_code": {
+            "type": "string",
+            "title": "Dt Code",
+            "examples": [
+              "DT-002"
+            ]
+          },
+          "hierarchy": {
+            "$ref": "#/components/schemas/MeterHierarchy"
+          },
+          "hierarchy_path": {
+            "type": "string",
+            "title": "Hierarchy Path",
+            "description": "Readable breadcrumb with duplicate names collapsed.",
+            "examples": [
+              "Jaipur Zone 2 / Circle 2 / Division 2 / Subdivision 2 / Substation 2 / Feeder 2 / Mansarovar DT 2"
+            ]
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GeoPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "distance_km": {
+            "type": "number",
+            "title": "Distance Km",
+            "description": "Great-circle distance from the query point."
+          }
+        },
+        "type": "object",
+        "required": [
+          "meter_id",
+          "serial_number",
+          "make",
+          "phase_type",
+          "install_status",
+          "install_type",
+          "build",
+          "dt_code",
+          "hierarchy",
+          "hierarchy_path",
+          "distance_km"
+        ],
+        "title": "NearbyMeter"
+      },
+      "Page_Meter_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Meter"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total",
+          "pages"
+        ],
+        "title": "Page[Meter]"
+      },
+      "Page_Transformer_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Transformer"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total",
+          "pages"
+        ],
+        "title": "Page[Transformer]"
+      },
+      "ReadyResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "unavailable"
+            ],
+            "title": "Status"
+          },
+          "dataset_cached": {
+            "type": "boolean",
+            "title": "Dataset Cached"
+          },
+          "meter_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meter Count"
+          },
+          "data_fetched_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Fetched At"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "dataset_cached",
+          "meter_count",
+          "data_fetched_at"
+        ],
+        "title": "ReadyResponse"
+      },
+      "StatsResponse": {
+        "properties": {
+          "total_meters": {
+            "type": "integer",
+            "title": "Total Meters"
+          },
+          "by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Status"
+          },
+          "by_make": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Make"
+          },
+          "by_phase": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Phase"
+          },
+          "by_build": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Build"
+          },
+          "by_install_type": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "By Install Type"
+          },
+          "transformers": {
+            "type": "integer",
+            "title": "Transformers"
+          },
+          "zones": {
+            "type": "integer",
+            "title": "Zones"
+          },
+          "feeders": {
+            "type": "integer",
+            "title": "Feeders"
+          },
+          "substations": {
+            "type": "integer",
+            "title": "Substations"
+          },
+          "meters_with_location": {
+            "type": "integer",
+            "title": "Meters With Location"
+          },
+          "data_fetched_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Data Fetched At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_meters",
+          "by_status",
+          "by_make",
+          "by_phase",
+          "by_build",
+          "by_install_type",
+          "transformers",
+          "zones",
+          "feeders",
+          "substations",
+          "meters_with_location",
+          "data_fetched_at"
+        ],
+        "title": "StatsResponse"
+      },
+      "Transformer": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "examples": [
+              "DT-001"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "examples": [
+              "Malviya Nagar DT 1"
+            ]
+          },
+          "feeder_code": {
+            "type": "string",
+            "title": "Feeder Code",
+            "examples": [
+              "F-001"
+            ]
+          },
+          "capacity_kva": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity Kva",
+            "description": "Nameplate capacity in kVA"
+          },
+          "meter_count": {
+            "type": "integer",
+            "title": "Meter Count",
+            "description": "Meters attached to this DT in the current dataset"
+          },
+          "installed_count": {
+            "type": "integer",
+            "title": "Installed Count"
+          },
+          "faulty_count": {
+            "type": "integer",
+            "title": "Faulty Count"
+          },
+          "decommissioned_count": {
+            "type": "integer",
+            "title": "Decommissioned Count"
+          },
+          "zone_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Code"
+          },
+          "zone_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "feeder_code",
+          "capacity_kva",
+          "meter_count",
+          "installed_count",
+          "faulty_count",
+          "decommissioned_count"
+        ],
+        "title": "Transformer"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Meters",
+      "description": "Search, inspect, locate and export meters."
+    },
+    {
+      "name": "Consumption",
+      "description": "Cumulative register history, normalised into interval usage."
+    },
+    {
+      "name": "Network",
+      "description": "Reconstructed hierarchy and distribution transformers."
+    },
+    {
+      "name": "Operations",
+      "description": "Summary statistics, readiness and session health."
+    },
+    {
+      "name": "Auth",
+      "description": "Server-side portal session management."
+    }
+  ]
+}

@@ -1,0 +1,1099 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Urja Meter Ops — API console</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --panel: #ffffff;
+      --panel-soft: #f8fafc;
+      --ink: #0f172a;
+      --ink-soft: #334155;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --accent: #4338ca;
+      --accent-soft: #eef2ff;
+      --teal: #0f766e;
+      --amber: #b45309;
+      --red: #b91c1c;
+      --shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 24px rgba(15, 23, 42, .05);
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background:
+        radial-gradient(900px 420px at 88% -8%, #e0e7ff 0%, rgba(224, 231, 255, 0) 60%),
+        radial-gradient(700px 380px at -10% 0%, #ccfbf1 0%, rgba(204, 251, 241, 0) 55%),
+        var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    button, input, select { font: inherit; color: inherit; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .shell { max-width: 1240px; margin: 0 auto; padding: 0 20px 56px; }
+
+    header.top {
+      position: sticky; top: 0; z-index: 30;
+      backdrop-filter: blur(14px);
+      background: rgba(244, 246, 251, .82);
+      border-bottom: 1px solid rgba(226, 232, 240, .9);
+    }
+    .top-inner {
+      max-width: 1240px; margin: 0 auto; padding: 14px 20px;
+      display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
+    }
+    .brand { display: flex; align-items: center; gap: 11px; margin-right: 4px; }
+    .brand-mark {
+      width: 36px; height: 36px; border-radius: 11px;
+      background: linear-gradient(145deg, #312e81, #4f46e5 55%, #0f766e);
+      display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 15px;
+      box-shadow: 0 6px 14px rgba(67, 56, 202, .22);
+      letter-spacing: -.04em;
+    }
+    .brand h1 { font-size: 15px; margin: 0; letter-spacing: -.01em; }
+    .brand p { margin: 0; font-size: 11.5px; color: var(--muted); }
+    nav.tabs { display: flex; gap: 2px; background: #e9edf5; padding: 3px; border-radius: 10px; }
+    nav.tabs button {
+      border: 0; background: transparent; padding: 7px 14px; border-radius: 8px;
+      font-size: 13px; font-weight: 500; color: var(--ink-soft); cursor: pointer;
+    }
+    nav.tabs button:hover { background: rgba(255,255,255,.6); }
+    nav.tabs button[aria-selected="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(15,23,42,.1); }
+    .top-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;
+      font-size: 12px; font-weight: 500; border: 1px solid var(--line); background: var(--panel);
+      color: var(--ink-soft); white-space: nowrap;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #94a3b8; }
+    .dot.ok { background: #14b8a6; box-shadow: 0 0 0 3px rgba(20,184,166,.14); }
+    .dot.warn { background: #d97706; box-shadow: 0 0 0 3px rgba(217,119,6,.14); }
+    .dot.bad { background: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,.14); }
+    .icon-btn {
+      border: 1px solid var(--line); background: var(--panel); width: 32px; height: 32px;
+      border-radius: 9px; display: grid; place-items: center; cursor: pointer; color: var(--ink-soft);
+    }
+    .icon-btn:hover { background: var(--panel-soft); }
+
+    main { padding-top: 22px; }
+    section.view { display: none; }
+    section.view.active { display: block; animation: fade .18s ease; }
+    @keyframes fade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .stat {
+      background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 16px 18px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+    }
+    .stat::after {
+      content: ""; position: absolute; inset: auto -30px -50px auto; width: 110px; height: 110px;
+      border-radius: 50%; background: var(--accent-soft); opacity: .55;
+    }
+    .stat .label { font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+    .stat .value { font-size: 28px; font-weight: 650; letter-spacing: -.03em; margin-top: 3px; }
+    .stat .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .stat.teal .value { color: var(--teal); }
+    .stat.amber .value { color: var(--amber); }
+    .stat.red .value { color: var(--red); }
+
+    .panel {
+      background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+      box-shadow: var(--shadow); overflow: hidden;
+    }
+    .panel-head {
+      padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: center;
+      gap: 12px; flex-wrap: wrap; background: linear-gradient(#fff, #fcfdff);
+    }
+    .panel-head h2 { font-size: 14.5px; margin: 0; letter-spacing: -.01em; }
+    .panel-head .hint { font-size: 12px; color: var(--muted); margin-left: auto; }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--line); background: var(--panel-soft); }
+    .field { position: relative; display: flex; align-items: center; }
+    .field.search { flex: 1 1 240px; min-width: 190px; }
+    .field svg { position: absolute; left: 10px; color: #94a3b8; pointer-events: none; }
+    input[type="search"], input[type="text"], select {
+      border: 1px solid #d5dbe6; background: #fff; border-radius: 9px; padding: 8px 10px;
+      font-size: 13px; outline: none; min-height: 36px;
+    }
+    input[type="search"] { padding-left: 32px; width: 100%; }
+    input:focus, select:focus { border-color: #a5b4fc; box-shadow: 0 0 0 3px rgba(99, 102, 241, .14); }
+    .toolbar select { max-width: 160px; }
+    .toolbar .spacer { flex: 1; }
+    .btn {
+      border: 1px solid #d5dbe6; background: #fff; border-radius: 9px; padding: 8px 12px;
+      font-size: 13px; font-weight: 500; cursor: pointer; min-height: 36px;
+    }
+    .btn:hover { background: var(--panel-soft); }
+    .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn.primary:hover { filter: brightness(1.06); }
+    .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+    .btn:disabled { opacity: .45; cursor: default; }
+    .btn.small { padding: 5px 9px; min-height: 29px; font-size: 12px; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th {
+      text-align: left; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase;
+      color: var(--muted); font-weight: 650; padding: 10px 14px; background: var(--panel-soft);
+      border-bottom: 1px solid var(--line); white-space: nowrap;
+    }
+    tbody td { padding: 11px 14px; border-bottom: 1px solid #eef2f7; vertical-align: middle; }
+    tbody tr { cursor: pointer; }
+    tbody tr:hover { background: #f8faff; }
+    tbody tr:last-child td { border-bottom: 0; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+    .muted { color: var(--muted); }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600;
+      padding: 3px 8px; border-radius: 999px; background: #f1f5f9; color: var(--ink-soft);
+    }
+    .status-pill.installed { background: #ccfbf1; color: #115e59; }
+    .status-pill.faulty { background: #fee2e2; color: #991b1b; }
+    .status-pill.decommissioned { background: #e2e8f0; color: #475569; }
+    .pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
+    .pager .pages { display: flex; gap: 6px; align-items: center; }
+    .empty { padding: 46px 20px; text-align: center; color: var(--muted); }
+    .empty strong { display: block; color: var(--ink-soft); font-size: 14px; margin-bottom: 4px; }
+
+    /* Detail drawer */
+    .backdrop {
+      position: fixed; inset: 0; background: rgba(15, 23, 42, .38); backdrop-filter: blur(2px);
+      opacity: 0; pointer-events: none; transition: opacity .18s ease; z-index: 40;
+    }
+    .backdrop.show { opacity: 1; pointer-events: auto; }
+    .drawer {
+      position: fixed; top: 0; right: 0; bottom: 0; width: min(720px, 100%);
+      background: var(--panel); z-index: 50; transform: translateX(102%);
+      transition: transform .22s cubic-bezier(.22,.8,.3,1); display: flex; flex-direction: column;
+      box-shadow: -14px 0 40px rgba(15, 23, 42, .16);
+    }
+    .drawer.open { transform: none; }
+    .drawer-head {
+      padding: 18px 22px; border-bottom: 1px solid var(--line); display: flex; gap: 14px; align-items: flex-start;
+      background: linear-gradient(120deg, #f8faff, #fff 60%);
+    }
+    .drawer-head .eyebrow { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 650; }
+    .drawer-head h2 { margin: 2px 0 0; font-size: 21px; letter-spacing: -.02em; }
+    .drawer-head .close { margin-left: auto; }
+    .drawer-body { overflow-y: auto; padding: 20px 22px 36px; }
+    .drawer-loading { padding: 50px 0; text-align: center; color: var(--muted); }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .card {
+      border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: #fff;
+    }
+    .card h3 { margin: 0 0 10px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .kv { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 13px; border-bottom: 1px dashed #eef2f7; }
+    .kv:last-child { border-bottom: 0; }
+    .kv dt { color: var(--muted); margin: 0; }
+    .kv dd { margin: 0; text-align: right; font-weight: 500; }
+    .breadcrumb { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; font-size: 11.5px; color: var(--muted); margin-top: 10px; }
+    .breadcrumb span.sep { opacity: .5; }
+    .warnbox { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 10px; padding: 10px 12px; font-size: 12.5px; margin-top: 14px; }
+    .warnbox ul { margin: 6px 0 0; padding-left: 18px; }
+    .consumption { margin-top: 18px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 12px; }
+    .mini { background: var(--panel-soft); border-radius: 10px; padding: 10px 12px; border: 1px solid #eef2f7; }
+    .mini .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .mini .v { font-size: 16px; font-weight: 600; margin-top: 2px; }
+    .chart-box { border: 1px solid var(--line); border-radius: 12px; padding: 10px 10px 6px; background: linear-gradient(#fff,#fbfdff); }
+    .chart-box svg { width: 100%; height: auto; display: block; }
+    .chart-legend { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); padding: 4px 2px 2px; }
+    .readings-table { margin-top: 14px; max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+    .readings-table table { font-size: 12px; }
+    .readings-table thead th { position: sticky; top: 0; z-index: 1; }
+    .readings-table td { padding: 7px 12px; }
+    .tag { display: inline-block; font-size: 10.5px; padding: 2px 7px; border-radius: 999px; background: var(--accent-soft); color: #3730a3; font-weight: 600; }
+    .tag.warn { background: #fef3c7; color: #92400e; }
+    .tag.bad { background: #fee2e2; color: #991b1b; }
+
+    /* Hierarchy */
+    .tree { list-style: none; margin: 0; padding: 8px 12px 14px; }
+    .tree ul { list-style: none; margin: 0; padding: 0 0 0 18px; border-left: 1px dashed #dbe3ef; margin-left: 12px; }
+    .tree ul.hidden { display: none; }
+    .tree-row {
+      display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 8px;
+      cursor: default; position: relative;
+    }
+    .tree-row:hover { background: #f6f8ff; }
+    .tree-row .twist {
+      width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 6px; background: #fff;
+      display: grid; place-items: center; cursor: pointer; color: var(--muted); padding: 0; flex: none;
+    }
+    .tree-row .twist svg { transition: transform .15s ease; }
+    .tree-row.expanded .twist svg { transform: rotate(90deg); }
+    .tree-row .twist.blank { border-color: transparent; background: transparent; }
+    .tree-row .node-name { font-size: 13px; font-weight: 500; }
+    .tree-row .node-code { font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace; }
+    .tree-row .node-count { margin-left: auto; font-size: 11px; color: var(--muted); background: #f1f5f9; border-radius: 999px; padding: 2px 8px; }
+    .tree-row .qtag { font-size: 10px; background: #fef3c7; color: #92400e; border-radius: 5px; padding: 1px 5px; }
+    .conflict-panel { margin-top: 16px; }
+    .conflict-list { display: grid; gap: 8px; padding: 12px 18px 18px; max-height: 300px; overflow: auto; }
+    .conflict { border: 1px solid #fde68a; background: #fffdf5; border-radius: 10px; padding: 10px 12px; font-size: 12.5px; }
+    .conflict .top { display: flex; gap: 8px; align-items: center; font-weight: 600; }
+    .conflict .top .tag { margin-left: auto; }
+    .conflict .parents { color: var(--muted); margin-top: 4px; font-size: 11.5px; }
+
+    /* Map */
+    .map-wrap { padding: 16px 18px 20px; }
+    .map-card { border: 1px solid var(--line); border-radius: 14px; background: linear-gradient(160deg, #fbfdff, #f3f7ff); overflow: hidden; }
+    .map-card svg { width: 100%; height: auto; display: block; }
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); padding: 10px 4px 0; }
+    .legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .map-note { font-size: 12px; color: var(--muted); padding: 10px 4px 0; }
+
+    .about-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; }
+    .about-grid p { color: var(--ink-soft); }
+    .link-list { display: grid; gap: 8px; }
+    .link-list a { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink-soft); }
+    .link-list a:hover { border-color: #c7d2fe; background: #f8faff; text-decoration: none; }
+    .link-list code { font-size: 12px; color: var(--muted); }
+
+    /* Key modal */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.42); z-index: 80; display: none; place-items: center; padding: 20px; }
+    .modal-backdrop.show { display: grid; }
+    .modal { width: min(430px, 100%); background: #fff; border-radius: 16px; padding: 22px; box-shadow: 0 24px 60px rgba(15,23,42,.24); }
+    .modal h2 { margin: 0 0 6px; font-size: 18px; }
+    .modal p { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+    .modal input { width: 100%; margin-bottom: 12px; }
+    .modal .row { display: flex; gap: 8px; justify-content: flex-end; }
+    .error-text { color: var(--red); font-size: 12.5px; min-height: 18px; margin-top: 10px; }
+
+    .toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translate(-50%, 16px);
+      background: #0f172a; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 13px;
+      opacity: 0; pointer-events: none; transition: all .18s ease; z-index: 90; max-width: 90vw;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .skeleton { height: 13px; border-radius: 6px; background: linear-gradient(90deg,#eef2f7,#e2e8f0,#eef2f7); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    @media (max-width: 900px) {
+      .stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .about-grid { grid-template-columns: 1fr; }
+      .detail-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .shell { padding: 0 12px 40px; }
+      .top-inner { padding: 10px 12px; gap: 10px; }
+      .brand p { display: none; }
+      nav.tabs { order: 3; width: 100%; }
+      nav.tabs button { flex: 1; }
+      .top-right .chip.session { display: none; }
+      .stats { gap: 10px; }
+      .stat { padding: 13px 14px; }
+      .stat .value { font-size: 23px; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .drawer-head, .drawer-body { padding-left: 16px; padding-right: 16px; }
+    }
+  </style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">UO</div>
+      <div>
+        <h1>Urja Meter Ops</h1>
+        <p>Distribution metering API console</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button type="button" role="tab" aria-selected="true" data-view="meters">Meters</button>
+      <button type="button" role="tab" aria-selected="false" data-view="network">Network</button>
+      <button type="button" role="tab" aria-selected="false" data-view="map">Map</button>
+      <button type="button" role="tab" aria-selected="false" data-view="about">About</button>
+    </nav>
+    <div class="top-right">
+      <span class="chip session" id="health-chip" title="Portal session status"><span class="dot" id="health-dot"></span><span id="health-label">Checking session</span></span>
+      <button type="button" class="icon-btn" id="key-btn" title="Set API key" aria-label="Set API key">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3m-3 3 2 2m-5 1 2 2"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <main>
+    <!-- Meters -->
+    <section class="view active" id="view-meters" aria-labelledby="meters-heading">
+      <div class="stats" id="stats">
+        <div class="stat"><div class="label">Meters</div><div class="value" data-stat="total_meters"><span class="skeleton" style="display:block;width:64px;height:28px"></span></div><div class="sub">Normalised records</div></div>
+        <div class="stat teal"><div class="label">Installed</div><div class="value" data-stat="installed">—</div><div class="sub">Active connections</div></div>
+        <div class="stat red"><div class="label">Faulty</div><div class="value" data-stat="faulty">—</div><div class="sub">Needs field attention</div></div>
+        <div class="stat amber"><div class="label">Transformers</div><div class="value" data-stat="transformers">—</div><div class="sub"><span data-stat="zones">—</span> zones · <span data-stat="feeders">—</span> feeders</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2 id="meters-heading">Meter inventory</h2>
+          <span class="hint" id="meters-meta">Loading dataset…</span>
+        </div>
+        <div class="toolbar">
+          <label class="field search">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input type="search" id="q" placeholder="Search ID, serial, make or hierarchy" autocomplete="off">
+          </label>
+          <select id="f-status" aria-label="Status filter">
+            <option value="">All statuses</option>
+            <option value="Installed">Installed</option>
+            <option value="Faulty">Faulty</option>
+            <option value="Decommissioned">Decommissioned</option>
+          </select>
+          <select id="f-make" aria-label="Make filter"><option value="">All makes</option></select>
+          <select id="f-build" aria-label="Build filter"><option value="">All builds</option><option value="legacy">legacy</option><option value="v2">v2</option></select>
+          <input type="text" id="f-zone" placeholder="Zone code or name" aria-label="Zone filter" style="width:150px">
+          <input type="text" id="f-dt" placeholder="DT code or name" aria-label="DT filter" style="width:140px">
+          <button type="button" class="btn ghost" id="clear-filters">Clear</button>
+          <span class="spacer"></span>
+          <select id="page-size" aria-label="Rows per page">
+            <option value="15">15 rows</option>
+            <option value="25" selected>25 rows</option>
+            <option value="50">50 rows</option>
+            <option value="100">100 rows</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Meter ID</th><th>Serial</th><th>Make</th><th>Phase</th><th>Status</th><th>DT</th><th>Feeder</th><th>Zone</th>
+              </tr>
+            </thead>
+            <tbody id="meters-body">
+              <tr><td colspan="8"><div class="empty"><strong>Loading meters</strong><span>Fetching the signed bulk export…</span></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pager">
+          <span id="pager-info">—</span>
+          <div class="pages">
+            <button type="button" class="btn small" id="prev-page">Previous</button>
+            <button type="button" class="btn small" id="next-page">Next</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Network -->
+    <section class="view" id="view-network" aria-labelledby="network-heading">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 id="network-heading">Network hierarchy</h2>
+          <span class="hint" id="hierarchy-meta">Reconstructed from per-meter paths</span>
+          <div style="display:flex;gap:6px;margin-left:12px">
+            <button type="button" class="btn small" id="expand-all">Expand all</button>
+            <button type="button" class="btn small" id="collapse-all">Collapse</button>
+          </div>
+        </div>
+        <div id="hierarchy-root"><div class="empty"><strong>Loading hierarchy</strong><span>Merging zone → DT paths…</span></div></div>
+      </div>
+      <div class="panel conflict-panel" id="conflict-panel" hidden>
+        <div class="panel-head"><h2>Reported parent conflicts</h2><span class="hint">The chosen parent is the most frequently reported; flagged, not hidden.</span></div>
+        <div class="conflict-list" id="conflict-list"></div>
+      </div>
+    </section>
+
+    <!-- Map -->
+    <section class="view" id="view-map" aria-labelledby="map-heading">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 id="map-heading">Meter geography</h2>
+          <span class="hint" id="map-meta">Haversine coordinates from the bulk export</span>
+        </div>
+        <div class="map-wrap">
+          <div class="map-card" id="map-root"><div class="empty"><strong>Loading coordinates</strong><span>Plotting meters with a location…</span></div></div>
+          <div class="legend" id="map-legend"></div>
+          <div class="map-note">A local scatter plot, not a street map: no paid tile service is used. Click a point to open that meter. Distance queries are available at <code class="mono">GET /api/v1/meters/near</code>.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- About -->
+    <section class="view" id="view-about" aria-labelledby="about-heading">
+      <div class="about-grid">
+        <div class="panel">
+          <div class="panel-head"><h2 id="about-heading">About this console</h2></div>
+          <div style="padding:16px 18px 20px">
+            <p>This is a read-only, normalised REST layer in front of the legacy Urja Meter Ops portal. The server keeps the portal session, signs the bulk export, repairs inconsistent hierarchy fields and converts cumulative registers into interval usage.</p>
+            <p class="muted" style="font-size:12.5px">Freshness is controlled by a short-lived dataset snapshot. The <span class="mono">X-Cache</span> and <span class="mono">X-Data-Fetched-At</span> response headers tell you whether a request was served from cache and when the source was read.</p>
+            <div class="summary-grid" style="margin-top:14px">
+              <div class="mini"><div class="k">Dataset</div><div class="v" id="about-dataset">—</div></div>
+              <div class="mini"><div class="k">With location</div><div class="v" id="about-located">—</div></div>
+              <div class="mini"><div class="k">Hierarchy conflicts</div><div class="v" id="about-conflicts">—</div></div>
+              <div class="mini"><div class="k">Session</div><div class="v" id="about-session">—</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>API surfaces</h2></div>
+          <div style="padding:16px 18px 20px">
+            <div class="link-list">
+              <a href="/docs" target="_blank" rel="noreferrer"><span>Swagger UI</span><code>/docs</code></a>
+              <a href="/reference" target="_blank" rel="noreferrer"><span>Scalar reference</span><code>/reference</code></a>
+              <a href="/openapi.json" target="_blank" rel="noreferrer"><span>OpenAPI contract</span><code>/openapi.json</code></a>
+              <a href="/api/v1/hierarchy" target="_blank" rel="noreferrer"><span>Hierarchy JSON</span><code>/api/v1/hierarchy</code></a>
+              <a href="/api/v1/export/meters.csv" target="_blank" rel="noreferrer"><span>Full CSV export</span><code>/api/v1/export/meters.csv</code></a>
+            </div>
+            <p class="muted" style="font-size:12px;margin-top:14px">If the service is started with <span class="mono">API_KEY</span>, use the key button in the header. The key is remembered in this browser only.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="backdrop" id="drawer-backdrop"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" aria-hidden="true">
+  <div class="drawer-head">
+    <div>
+      <div class="eyebrow">Meter detail</div>
+      <h2 id="drawer-title">Meter</h2>
+      <div class="breadcrumb" id="drawer-breadcrumb"></div>
+    </div>
+    <button type="button" class="icon-btn close" id="drawer-close" aria-label="Close detail">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+</aside>
+
+<div class="modal-backdrop" id="key-modal" role="dialog" aria-modal="true" aria-labelledby="key-title">
+  <form class="modal" id="key-form">
+    <h2 id="key-title">API key required</h2>
+    <p>This deployment gates the API with <span class="mono">X-API-Key</span>. The key is stored in this browser's local storage.</p>
+    <input type="password" id="key-input" placeholder="Paste X-API-Key" autocomplete="off" aria-label="API key">
+    <div class="error-text" id="key-error"></div>
+    <div class="row">
+      <button type="button" class="btn" id="key-cancel">Cancel</button>
+      <button type="submit" class="btn primary">Use key</button>
+    </div>
+  </form>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  "use strict";
+
+  const state = {
+    view: "meters",
+    key: localStorage.getItem("urja.apiKey") || "",
+    stats: null,
+    hierarchy: null,
+    maps: null,
+    meters: { page: 1, pageSize: 25, q: "", status: "", make: "", build: "", zone: "", dt: "", total: 0, pages: 0 },
+    drawer: null,
+  };
+
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
+  function esc(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  function fmt(value) {
+    return new Intl.NumberFormat("en-IN").format(value ?? 0);
+  }
+
+  function toast(message) {
+    const node = $("#toast");
+    node.textContent = message;
+    node.classList.add("show");
+    clearTimeout(node._timer);
+    node._timer = setTimeout(() => node.classList.remove("show"), 3200);
+  }
+
+  function withQuery(path, params) {
+    const url = new URL(path, location.origin);
+    for (const [key, value] of Object.entries(params || {})) {
+      if (value !== undefined && value !== null && String(value) !== "") url.searchParams.set(key, value);
+    }
+    return url.pathname + url.search;
+  }
+
+  let keyPrompt = null;
+  function askForKey() {
+    if (keyPrompt) return keyPrompt;
+    keyPrompt = new Promise((resolve) => {
+      const modal = $("#key-modal");
+      const input = $("#key-input");
+      const form = $("#key-form");
+      $("#key-error").textContent = "";
+      input.value = state.key;
+      modal.classList.add("show");
+      input.focus();
+
+      function cleanup(result) {
+        modal.classList.remove("show");
+        form.removeEventListener("submit", submit);
+        $("#key-cancel").removeEventListener("click", cancel);
+        keyPrompt = null;
+        resolve(result);
+      }
+      function submit(event) {
+        event.preventDefault();
+        const value = input.value.trim();
+        if (!value) {
+          $("#key-error").textContent = "Enter the API key.";
+          return;
+        }
+        state.key = value;
+        localStorage.setItem("urja.apiKey", value);
+        cleanup(true);
+      }
+      function cancel() { cleanup(false); }
+      form.addEventListener("submit", submit);
+      $("#key-cancel").addEventListener("click", cancel);
+    });
+    return keyPrompt;
+  }
+
+  async function api(path, options = {}, retried = false) {
+    const headers = Object.assign({ Accept: "application/json" }, options.headers || {});
+    if (state.key) headers["X-API-Key"] = state.key;
+    let response;
+    try {
+      response = await fetch(path, Object.assign({}, options, { headers }));
+    } catch (error) {
+      throw new Error("Network error: " + error.message);
+    }
+    if (response.status === 401 && !retried) {
+      const accepted = await askForKey();
+      if (accepted) return api(path, options, true);
+      throw new Error("An API key is required for this deployment.");
+    }
+    if (!response.ok) {
+      let message = "HTTP " + response.status;
+      try {
+        const body = await response.json();
+        if (body && body.message) message = body.message;
+      } catch (_) { /* non-JSON error */ }
+      throw new Error(message);
+    }
+    return response;
+  }
+
+  async function apiJson(path, options) {
+    const response = await api(path, options);
+    return response.json();
+  }
+
+  function switchView(name) {
+    state.view = name;
+    $$("nav.tabs button").forEach((button) => {
+      button.setAttribute("aria-selected", String(button.dataset.view === name));
+    });
+    $$("section.view").forEach((section) => {
+      section.classList.toggle("active", section.id === "view-" + name);
+    });
+    if (name === "network" && !state.hierarchy) loadHierarchy();
+    if (name === "map" && !state.maps) loadMap();
+    if (window.location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
+  }
+
+  // ---------------------------------------------------------------- health
+  async function loadHealth() {
+    try {
+      const health = await apiJson("/health");
+      const dot = $("#health-dot");
+      const label = $("#health-label");
+      const sessionOk = !!(health.session && health.session.authenticated);
+      dot.className = "dot " + (health.status === "ok" ? (sessionOk ? "ok" : "warn") : "bad");
+      label.textContent = health.status === "ok"
+        ? (sessionOk ? "Portal session active" : "Session pending")
+        : "Service degraded";
+      $("#about-session").textContent = sessionOk ? "Active" : "Pending";
+    } catch (error) {
+      $("#health-dot").className = "dot bad";
+      $("#health-label").textContent = "Service unreachable";
+      $("#about-session").textContent = "Down";
+    }
+  }
+
+  // ---------------------------------------------------------------- stats
+  function renderStats(stats) {
+    state.stats = stats;
+    const set = (name, value) => {
+      const node = document.querySelector('[data-stat="' + name + '"]');
+      if (node) node.textContent = fmt(value);
+    };
+    set("total_meters", stats.total_meters);
+    set("installed", (stats.by_status && stats.by_status.Installed) || 0);
+    set("faulty", (stats.by_status && stats.by_status.Faulty) || 0);
+    set("transformers", stats.transformers);
+    set("zones", stats.zones);
+    set("feeders", stats.feeders);
+    $("#about-dataset").textContent = fmt(stats.total_meters);
+    $("#about-located").textContent = fmt(stats.meters_with_location);
+    $("#meters-meta").textContent = fmt(stats.total_meters) + " meters · data " + shortTime(stats.data_fetched_at);
+
+    const makeSelect = $("#f-make");
+    const current = makeSelect.value;
+    makeSelect.innerHTML = '<option value="">All makes</option>' + Object.keys(stats.by_make || {})
+      .map((make) => '<option value="' + esc(make) + '">' + esc(make) + " (" + fmt(stats.by_make[make]) + ")</option>")
+      .join("");
+    makeSelect.value = current;
+  }
+
+  async function loadStats() {
+    try {
+      renderStats(await apiJson("/api/v1/stats/summary"));
+    } catch (error) {
+      toast("Could not load summary: " + error.message);
+    }
+  }
+
+  function shortTime(value) {
+    if (!value) return "unknown";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" });
+  }
+
+  // ---------------------------------------------------------------- meters
+  function meterQuery() {
+    const meter = state.meters;
+    return withQuery("/api/v1/meters", {
+      q: meter.q, status: meter.status, make: meter.make, build: meter.build,
+      zone: meter.zone, dt: meter.dt, page: meter.page, page_size: meter.pageSize,
+    });
+  }
+
+  function statusPill(status) {
+    const safe = String(status || "").toLowerCase();
+    const cls = safe === "installed" ? "installed" : safe === "faulty" ? "faulty" : safe === "decommissioned" ? "decommissioned" : "";
+    return '<span class="status-pill ' + cls + '">' + esc(status || "Unknown") + "</span>";
+  }
+
+  function renderMeters(page) {
+    state.meters.total = page.total;
+    state.meters.pages = page.pages;
+    const body = $("#meters-body");
+    if (!page.items.length) {
+      body.innerHTML = '<tr><td colspan="8"><div class="empty"><strong>No meters match these filters</strong><span>Try clearing the search or choosing a different zone.</span></div></td></tr>';
+    } else {
+      body.innerHTML = page.items.map((meter) => {
+        const h = meter.hierarchy || {};
+        return '<tr data-meter="' + esc(meter.meter_id) + '" tabindex="0">' +
+          '<td class="mono"><strong>' + esc(meter.meter_id) + "</strong></td>" +
+          "<td class=\"mono\">" + esc(meter.serial_number) + "</td>" +
+          "<td>" + esc(meter.make) + "</td>" +
+          "<td>" + esc(meter.phase_type) + "</td>" +
+          "<td>" + statusPill(meter.install_status) + "</td>" +
+          "<td class=\"mono\">" + esc(meter.dt_code) + "</td>" +
+          "<td>" + esc(h.feeder ? h.feeder.name : "") + "</td>" +
+          "<td class=\"muted\">" + esc(h.zone ? h.zone.name : "") + "</td>" +
+          "</tr>";
+      }).join("");
+    }
+    const first = page.total ? (page.page - 1) * page.page_size + 1 : 0;
+    const last = Math.min(page.page * page.page_size, page.total);
+    $("#pager-info").textContent = page.total
+      ? "Showing " + fmt(first) + "–" + fmt(last) + " of " + fmt(page.total) + " meters · page " + page.page + " of " + Math.max(1, page.pages)
+      : "No meters";
+    $("#prev-page").disabled = page.page <= 1;
+    $("#next-page").disabled = page.page >= Math.max(1, page.pages);
+  }
+
+  let metersRequest = 0;
+  async function loadMeters() {
+    const request = ++metersRequest;
+    $("#meters-body").innerHTML = '<tr><td colspan="8"><div class="empty"><strong>Loading meters</strong><span>Querying the normalised dataset…</span></div></td></tr>';
+    try {
+      const page = await apiJson(meterQuery());
+      if (request !== metersRequest) return;
+      renderMeters(page);
+    } catch (error) {
+      if (request !== metersRequest) return;
+      $("#meters-body").innerHTML = '<tr><td colspan="8"><div class="empty"><strong>Could not load meters</strong><span>' + esc(error.message) + "</span></div></td></tr>";
+    }
+  }
+
+  function applyFilters(resetPage) {
+    const meter = state.meters;
+    meter.q = $("#q").value.trim();
+    meter.status = $("#f-status").value;
+    meter.make = $("#f-make").value;
+    meter.build = $("#f-build").value;
+    meter.zone = $("#f-zone").value.trim();
+    meter.dt = $("#f-dt").value.trim();
+    meter.pageSize = Number($("#page-size").value) || 25;
+    if (resetPage) meter.page = 1;
+    loadMeters();
+  }
+
+  // ---------------------------------------------------------------- drawer
+  function openDrawer(meterId) {
+    state.drawer = meterId;
+    const drawer = $("#drawer");
+    drawer.classList.add("open");
+    drawer.setAttribute("aria-hidden", "false");
+    $("#drawer-backdrop").classList.add("show");
+    $("#drawer-title").textContent = "Meter " + meterId;
+    $("#drawer-breadcrumb").textContent = "";
+    $("#drawer-body").innerHTML = '<div class="drawer-loading">Loading nameplate and consumption…</div>';
+    loadDrawer(meterId);
+  }
+
+  function closeDrawer() {
+    state.drawer = null;
+    const drawer = $("#drawer");
+    drawer.classList.remove("open");
+    drawer.setAttribute("aria-hidden", "true");
+    $("#drawer-backdrop").classList.remove("show");
+  }
+
+  async function loadDrawer(meterId) {
+    try {
+      const [detail, consumption] = await Promise.all([
+        apiJson("/api/v1/meters/" + encodeURIComponent(meterId)),
+        apiJson("/api/v1/meters/" + encodeURIComponent(meterId) + "/consumption").catch((error) => ({ error: error.message })),
+      ]);
+      if (state.drawer !== meterId) return;
+      renderDrawer(detail, consumption);
+    } catch (error) {
+      if (state.drawer !== meterId) return;
+      $("#drawer-body").innerHTML = '<div class="empty"><strong>Could not load meter</strong><span>' + esc(error.message) + "</span></div>";
+    }
+  }
+
+  function renderDrawer(detail, consumption) {
+    const h = detail.hierarchy || {};
+    const crumb = ["zone", "circle", "division", "subdivision", "substation", "feeder", "dt"]
+      .map((level) => h[level] && h[level].name)
+      .filter(Boolean);
+    $("#drawer-breadcrumb").innerHTML = crumb.map((name) => "<span>" + esc(name) + "</span>").join('<span class="sep">/</span>');
+    $("#drawer-title").textContent = "Meter " + detail.meter_id;
+
+    const fields = [
+      ["Serial number", detail.serial_number],
+      ["Make", detail.make],
+      ["Phase", detail.phase_type],
+      ["Status", detail.install_status],
+      ["Install type", detail.install_type],
+      ["Build", detail.build],
+      ["DT code", detail.dt_code],
+      ["Detail source", detail.detail_source === "portal_ssr" ? "Live portal page" : "Cached bulk export"],
+    ];
+    const location = detail.location
+      ? detail.location.latitude + ", " + detail.location.longitude
+      : "Not reported";
+    const warnings = (detail.warnings || []).map((warning) => "<li>" + esc(warning) + "</li>").join("");
+
+    $("#drawer-body").innerHTML =
+      '<div class="detail-grid">' +
+        '<div class="card"><h3>Nameplate</h3><dl style="margin:0">' +
+          fields.map(([key, value]) => '<div class="kv"><dt>' + esc(key) + "</dt><dd>" + esc(value) + "</dd></div>").join("") +
+        "</dl></div>" +
+        '<div class="card"><h3>Location</h3><dl style="margin:0">' +
+          '<div class="kv"><dt>Latitude / longitude</dt><dd class="mono">' + esc(location) + "</dd></div>" +
+          '<div class="kv"><dt>Observed</dt><dd>' + esc(shortTime(detail.observed_at)) + "</dd></div>" +
+          '<div class="kv"><dt>Hierarchy path</dt><dd style="text-align:left;max-width:60%">' + esc(detail.hierarchy_path) + "</dd></div>" +
+        "</dl></div>" +
+      "</div>" +
+      (warnings ? '<div class="warnbox"><strong>Data quality notes</strong><ul>' + warnings + "</ul></div>" : "") +
+      renderConsumption(consumption);
+
+    $("#drawer-body").scrollTop = 0;
+  }
+
+  function renderConsumption(data) {
+    if (!data || data.error) {
+      return '<div class="consumption card"><h3>Consumption</h3><p class="muted">' + esc(data ? data.error : "Unavailable") + "</p></div>";
+    }
+    const readings = data.readings || [];
+    const summary = data.summary || {};
+    const anomalies = data.anomalies || {};
+    const anomalyBits = [];
+    if (anomalies.register_regressions) anomalyBits.push(anomalies.register_regressions + " register regression(s)");
+    if (anomalies.duplicate_timestamps) anomalyBits.push(anomalies.duplicate_timestamps + " duplicate timestamp(s)");
+    if (anomalies.unparsable_readings) anomalyBits.push(anomalies.unparsable_readings + " unparsable row(s)");
+
+    if (!readings.length) {
+      return '<div class="consumption card"><h3>Consumption</h3><p class="muted">No readings in the portal\'s default window.</p></div>';
+    }
+
+    return '<div class="consumption card"><h3>Consumption</h3>' +
+      '<div class="summary-grid">' +
+        '<div class="mini"><div class="k">kWh consumed</div><div class="v">' + esc(fmtNumber(summary.kwh_consumed)) + "</div></div>" +
+        '<div class="mini"><div class="k">Readings</div><div class="v">' + fmt(data.count) + "</div></div>" +
+        '<div class="mini"><div class="k">Granularity</div><div class="v">' + esc(data.granularity) + "</div></div>" +
+        '<div class="mini"><div class="k">Avg voltage</div><div class="v">' + (summary.average_voltage == null ? "—" : esc(summary.average_voltage) + " V") + "</div></div>" +
+      "</div>" +
+      consumptionChart(readings, data) +
+      '<div class="chart-legend"><span>' + esc(shortTime(data.first_reading_at)) + "</span><span>" +
+        esc(shortTime(data.last_reading_at)) + " · IST</span></div>" +
+      (anomalyBits.length ? '<div class="warnbox">Anomalies detected: ' + esc(anomalyBits.join(", ")) + ".</div>" : "") +
+      renderReadingTable(readings) +
+      "</div>";
+  }
+
+  function fmtNumber(value) {
+    if (value == null) return "—";
+    return Number(value).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+  }
+
+  function consumptionChart(readings, data) {
+    const values = readings.map((reading) => Math.max(0, Number(reading.kwh_delta) || 0));
+    const width = 660, height = 190, padL = 38, padR = 12, padT = 12, padB = 26;
+    const plotW = width - padL - padR, plotH = height - padT - padB;
+    const peak = Math.max(0, ...values);
+    const max = Math.max(1, peak);
+    const step = plotW / Math.max(1, values.length - 1);
+    const barW = Math.max(1.5, Math.min(12, step * 0.68));
+    const bars = values.map((value, index) => {
+      const x = padL + index * step;
+      const barH = (value / max) * plotH;
+      const y = padT + plotH - barH;
+      return '<rect x="' + (x - barW / 2).toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) +
+        '" height="' + barH.toFixed(1) + '" rx="1.5" fill="#4f46e5" opacity="' + (value ? 0.82 : 0) + '"></rect>';
+    }).join("");
+    const grid = [0, 0.5, 1].map((fraction) => {
+      const y = padT + plotH - fraction * plotH;
+      return '<line x1="' + padL + '" x2="' + (width - padR) + '" y1="' + y + '" y2="' + y + '" stroke="#e8edf5" stroke-width="1"/>' +
+        '<text x="' + (padL - 6) + '" y="' + (y + 3.5) + '" text-anchor="end" font-size="9.5" fill="#94a3b8">' + fmtNumber(max * fraction) + "</text>";
+    }).join("");
+    const every = Math.max(1, Math.round(values.length / 5));
+    const ticks = readings.map((reading, index) => {
+      if (index % every !== 0 && index !== readings.length - 1) return "";
+      const x = padL + index * step;
+      const time = String(reading.timestamp || "").slice(11, 16);
+      return '<text x="' + x.toFixed(1) + '" y="' + (height - 8) + '" text-anchor="middle" font-size="9.5" fill="#94a3b8">' + esc(time) + "</text>";
+    }).join("");
+    return '<div class="chart-box" aria-label="Interval consumption chart">' +
+      '<svg viewBox="0 0 ' + width + " " + height + '" role="img">' +
+      '<text x="' + padL + '" y="8" font-size="9.5" fill="#94a3b8">Usage per interval (kWh)</text>' +
+      grid + bars + ticks +
+      '<line x1="' + padL + '" x2="' + (width - padR) + '" y1="' + (padT + plotH) + '" y2="' + (padT + plotH) + '" stroke="#cbd5e1"/>' +
+      "</svg>" +
+      '<div class="chart-legend"><span>' + esc(data.granularity) + " · " + (data.interval_minutes ? data.interval_minutes + " min" : "variable") + "</span><span>Peak " + fmtNumber(peak) + " kWh</span></div>" +
+      "</div>";
+  }
+
+  function renderReadingTable(readings) {
+    const rows = readings.slice(-120).reverse().map((reading) => (
+      "<tr><td class=\"mono\">" + esc(String(reading.timestamp || "").replace("T", " ").slice(0, 16)) + "</td>" +
+      "<td>" + fmtNumber(reading.kwh) + "</td>" +
+      "<td>" + (reading.kwh_delta == null ? "—" : fmtNumber(reading.kwh_delta)) + "</td>" +
+      "<td>" + (reading.volt_r == null ? "—" : esc(reading.volt_r)) + "</td></tr>"
+    )).join("");
+    return '<div class="readings-table"><table><thead><tr><th>Timestamp (IST)</th><th>Register kWh</th><th>Interval kWh</th><th>V(R)</th></tr></thead><tbody>' + rows + "</tbody></table></div>";
+  }
+
+  // ---------------------------------------------------------------- hierarchy
+  async function loadHierarchy() {
+    try {
+      const data = await apiJson("/api/v1/hierarchy");
+      state.hierarchy = data;
+      renderHierarchy(data);
+      $("#about-conflicts").textContent = fmt((data.conflicts || []).length);
+    } catch (error) {
+      $("#hierarchy-root").innerHTML = '<div class="empty"><strong>Could not load hierarchy</strong><span>' + esc(error.message) + "</span></div>";
+    }
+  }
+
+  function qualityTags(node) {
+    const interesting = (node.data_quality || []).filter((flag) => ["parent_conflict", "name_alias", "code_derived", "name_derived", "missing_in_source", "orphan"].includes(flag));
+    return interesting.map((flag) => '<span class="qtag" title="' + esc(flag) + '">' + esc(flag.replace(/_/g, " ")) + "</span>").join("");
+  }
+
+  function treeNode(node, depth) {
+    const children = node.children || [];
+    const id = "tree-" + String(node.id || Math.random()).replace(/[^A-Za-z0-9_-]/g, "-") + "-" + depth;
+    const expanded = depth === 0;
+    const twist = children.length
+      ? '<button type="button" class="twist" aria-expanded="' + expanded + '" aria-controls="' + id + '"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 6 6 6-6 6"/></svg></button>'
+      : '<span class="twist blank"></span>';
+    return '<li>' +
+      '<div class="tree-row' + (expanded ? " expanded" : "") + '" style="padding-left:' + (depth * 2) + 'px">' + twist +
+        '<span class="node-name">' + esc(node.name) + "</span>" +
+        (node.code ? '<span class="node-code">' + esc(node.code) + "</span>" : "") +
+        qualityTags(node) +
+        '<span class="node-count">' + fmt(node.meter_count) + "</span>" +
+      "</div>" +
+      (children.length ? '<ul id="' + id + '" class="' + (expanded ? "" : "hidden") + '">' + children.map((child) => treeNode(child, depth + 1)).join("") + "</ul>" : "") +
+      "</li>";
+  }
+
+  function renderHierarchy(data) {
+    $("#hierarchy-meta").textContent = fmt(data.total_meters) + " meters · " +
+      ["zone", "circle", "division", "subdivision", "substation", "feeder", "dt"].map((level) => fmt(data.node_counts[level]) + " " + level + "s").join(" · ");
+    const list = '<ul class="tree">' + (data.zones || []).map((zone) => treeNode(zone, 0)).join("") + "</ul>";
+    $("#hierarchy-root").innerHTML = list;
+    $("#hierarchy-root").addEventListener("click", (event) => {
+      const twist = event.target.closest(".twist");
+      if (!twist || twist.classList.contains("blank")) return;
+      const row = twist.closest(".tree-row");
+      const target = document.getElementById(twist.getAttribute("aria-controls"));
+      if (!target) return;
+      const expand = target.classList.contains("hidden");
+      target.classList.toggle("hidden", !expand);
+      row.classList.toggle("expanded", expand);
+      twist.setAttribute("aria-expanded", String(expand));
+    });
+    const conflicts = data.conflicts || [];
+    if (conflicts.length) {
+      $("#conflict-panel").hidden = false;
+      const counts = {};
+      conflicts.forEach((conflict) => { counts[conflict.level] = (counts[conflict.level] || 0) + 1; });
+      $("#conflict-list").innerHTML = Object.entries(counts).map(([level, count]) =>
+        '<div class="conflict"><div class="top"><span>' + fmt(count) + " " + esc(level) + " conflict(s)</span><span class=\"tag warn\">resolved</span></div>" +
+        '<div class="parents">' + conflicts.filter((item) => item.level === level).slice(0, 6).map((item) =>
+          esc(item.name) + " → chosen parent " + esc(item.chosen_parent) + " (of " + item.reported_parents.length + ")"
+        ).join("<br>") + (count > 6 ? "<br>…" : "") + "</div></div>"
+      ).join("");
+    }
+  }
+
+  function setAllExpanded(expanded) {
+    $$("#hierarchy-root ul ul").forEach((list) => list.classList.toggle("hidden", !expanded));
+    $$("#hierarchy-root .tree-row").forEach((row) => {
+      const twist = $(".twist", row);
+      if (!twist || twist.classList.contains("blank")) return;
+      row.classList.toggle("expanded", expanded);
+      twist.setAttribute("aria-expanded", String(expanded));
+    });
+  }
+
+  // ---------------------------------------------------------------- map
+  const STATUS_COLORS = { installed: "#0f766e", faulty: "#dc2626", decommissioned: "#64748b", unknown: "#6366f1" };
+
+  async function loadMap() {
+    try {
+      const payload = await apiJson("/api/v1/export/meters");
+      state.maps = payload;
+      renderMap(payload);
+    } catch (error) {
+      $("#map-root").innerHTML = '<div class="empty"><strong>Could not plot meters</strong><span>' + esc(error.message) + "</span></div>";
+    }
+  }
+
+  function renderMap(payload) {
+    const meters = (payload.data || []).filter((meter) => meter.location);
+    $("#map-meta").textContent = fmt(meters.length) + " of " + fmt(payload.total) + " meters have coordinates";
+    if (!meters.length) {
+      $("#map-root").innerHTML = '<div class="empty"><strong>No coordinates reported</strong><span>The bulk export did not include locations.</span></div>';
+      return;
+    }
+    const width = 1000, height = 520, pad = 34;
+    const lats = meters.map((meter) => meter.location.latitude);
+    const lons = meters.map((meter) => meter.location.longitude);
+    let minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    let minLon = Math.min(...lons), maxLon = Math.max(...lons);
+    if (maxLat - minLat < 1e-4) { maxLat += 0.001; minLat -= 0.001; }
+    if (maxLon - minLon < 1e-4) { maxLon += 0.001; minLon -= 0.001; }
+    const x = (lon) => pad + ((lon - minLon) / (maxLon - minLon)) * (width - pad * 2);
+    const y = (lat) => height - pad - ((lat - minLat) / (maxLat - minLat)) * (height - pad * 2);
+    const grid = [0, 0.25, 0.5, 0.75, 1].map((fraction) =>
+      '<line x1="' + pad + '" x2="' + (width - pad) + '" y1="' + (pad + fraction * (height - pad * 2)) + '" y2="' + (pad + fraction * (height - pad * 2)) + '" stroke="#e4ebf5"/>' +
+      '<line y1="' + pad + '" y2="' + (height - pad) + '" x1="' + (pad + fraction * (width - pad * 2)) + '" x2="' + (pad + fraction * (width - pad * 2)) + '" stroke="#e4ebf5"/>'
+    ).join("");
+    const points = meters.map((meter) => {
+      const color = STATUS_COLORS[String(meter.install_status || "").toLowerCase()] || STATUS_COLORS.unknown;
+      const cx = x(meter.location.longitude).toFixed(1);
+      const cy = y(meter.location.latitude).toFixed(1);
+      return '<circle cx="' + cx + '" cy="' + cy + '" r="3.2" fill="' + color + '" fill-opacity=".75" stroke="#fff" stroke-width=".8" data-meter="' + esc(meter.meter_id) + '">' +
+        "<title>" + esc(meter.meter_id + " · " + meter.install_status + " · " + (meter.hierarchy.dt || {}).name) + "</title></circle>";
+    }).join("");
+    const labels =
+      '<text x="' + pad + '" y="' + (height - 8) + '" font-size="10" fill="#94a3b8">' + minLon.toFixed(3) + "° E</text>" +
+      '<text x="' + (width - pad) + '" y="' + (height - 8) + '" text-anchor="end" font-size="10" fill="#94a3b8">' + maxLon.toFixed(3) + "° E</text>" +
+      '<text x="6" y="' + (pad + 4) + '" font-size="10" fill="#94a3b8" transform="rotate(-90 6 ' + (pad + 4) + ')" text-anchor="end">' + maxLat.toFixed(3) + "° N</text>" +
+      '<text x="6" y="' + (height - pad) + '" font-size="10" fill="#94a3b8" transform="rotate(-90 6 ' + (height - pad) + ')" text-anchor="end">' + minLat.toFixed(3) + "° N</text>";
+    $("#map-root").innerHTML = '<svg viewBox="0 0 ' + width + " " + height + '" role="img" aria-label="Meter coordinate scatter plot">' +
+      '<rect width="' + width + '" height="' + height + '" fill="transparent"/>' + grid + points + labels + "</svg>";
+    const counts = {};
+    meters.forEach((meter) => {
+      const status = meter.install_status || "Unknown";
+      counts[status] = (counts[status] || 0) + 1;
+    });
+    $("#map-legend").innerHTML = Object.entries(counts).map(([status, count]) =>
+      '<span><i style="background:' + (STATUS_COLORS[String(status).toLowerCase()] || STATUS_COLORS.unknown) + '"></i>' + esc(status) + " · " + fmt(count) + "</span>"
+    ).join("");
+    $("#map-root svg").addEventListener("click", (event) => {
+      const point = event.target.closest("circle[data-meter]");
+      if (point) openDrawer(point.dataset.meter);
+    });
+  }
+
+  // ---------------------------------------------------------------- events
+  document.addEventListener("DOMContentLoaded", () => {
+    $$("nav.tabs button").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.view)));
+
+    const initial = (location.hash || "#meters").slice(1);
+    if (["meters", "network", "map", "about"].includes(initial)) switchView(initial);
+
+    let searchTimer;
+    $("#q").addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => applyFilters(true), 280);
+    });
+    ["f-status", "f-make", "f-build", "page-size"].forEach((id) => $("#" + id).addEventListener("change", () => applyFilters(true)));
+    ["f-zone", "f-dt"].forEach((id) => {
+      let timer;
+      $("#" + id).addEventListener("input", () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => applyFilters(true), 320);
+      });
+    });
+    $("#clear-filters").addEventListener("click", () => {
+      $("#q").value = ""; $("#f-status").value = ""; $("#f-make").value = ""; $("#f-build").value = "";
+      $("#f-zone").value = ""; $("#f-dt").value = "";
+      state.meters.page = 1;
+      loadMeters();
+    });
+    $("#prev-page").addEventListener("click", () => { if (state.meters.page > 1) { state.meters.page--; loadMeters(); } });
+    $("#next-page").addEventListener("click", () => { if (state.meters.page < state.meters.pages) { state.meters.page++; loadMeters(); } });
+
+    $("#meters-body").addEventListener("click", (event) => {
+      const row = event.target.closest("tr[data-meter]");
+      if (row) openDrawer(row.dataset.meter);
+    });
+    $("#meters-body").addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      const row = event.target.closest("tr[data-meter]");
+      if (row) openDrawer(row.dataset.meter);
+    });
+
+    $("#drawer-close").addEventListener("click", closeDrawer);
+    $("#drawer-backdrop").addEventListener("click", closeDrawer);
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        if ($("#key-modal").classList.contains("show")) {
+          $("#key-cancel").click();
+          return;
+        }
+        closeDrawer();
+      }
+    });
+
+    $("#key-btn").addEventListener("click", async () => {
+      const accepted = await askForKey();
+      if (accepted) {
+        toast("API key saved");
+        loadHealth(); loadStats(); loadMeters();
+        if (state.view === "network" && !state.hierarchy) loadHierarchy();
+        if (state.view === "map" && !state.maps) loadMap();
+      }
+    });
+
+    $("#expand-all").addEventListener("click", () => setAllExpanded(true));
+    $("#collapse-all").addEventListener("click", () => setAllExpanded(false));
+
+    loadHealth();
+    loadStats();
+    loadMeters();
+    setInterval(loadHealth, 60000);
+  });
+</script>
+</body>
+</html>
