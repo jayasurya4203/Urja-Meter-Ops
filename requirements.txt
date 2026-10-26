@@ -4,3 +4,5 @@ httpx>=0.28,<0.29
 pydantic>=2.10,<3
 pydantic-settings>=2.7,<3
 json5>=0.10,<1
+# zoneinfo has no fallback IANA database on Windows; nothing imports this directly.
+tzdata>=2024.1
