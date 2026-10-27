@@ -95,8 +95,8 @@ for any data endpoint.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PORTAL_BASE_URL` | `https://urja-ops.flockenergy.tech` | Legacy portal root |
-| `PORTAL_EMAIL` | — | Portal account email |
-| `PORTAL_PASSWORD` | — | Portal password |
+| `PORTAL_EMAIL` | — | operator@urja.local |
+| `PORTAL_PASSWORD` | — | urja-ops-2026 |
 | `PORTAL_TIMEZONE` | `Asia/Kolkata` | Timezone applied to portal timestamps |
 | `DATASET_CACHE_TTL_SECONDS` | `300` | Bulk-export snapshot lifetime |
 | `DETAIL_CACHE_TTL_SECONDS` | `120` | Per-meter SSR detail lifetime |
@@ -482,11 +482,11 @@ REFLECTION.md         Assumptions, difficult parts, mistakes, self-critique
 4. **More integration coverage.** An opt-in, read-only live smoke test against the
    portal in CI (gated by credentials), plus load tests for concurrent cold
    requests and cache single-flight.
-5. **Production packaging.** Dockerfile, healthcheck, pinned runtime, CI for tests
+5. Production packaging. Dockerfile, healthcheck, pinned runtime, CI for tests
    + lint + OpenAPI drift, and a deployment example behind a reverse proxy.
-6. **Richer analytics.** Per-DT and per-feeder consumption aggregates, anomaly
+6. Richer analytics. Per-DT and per-feeder consumption aggregates, anomaly
    trends, and a proper charting component on the dashboard.
-7. **Stronger auth story.** Pluggable API keys with rotation/expiry, per-key rate
+7. Stronger auth story. Pluggable API keys with rotation/expiry, per-key rate
    limits, and optional OIDC for the dashboard.
 
 ## Deliverables
