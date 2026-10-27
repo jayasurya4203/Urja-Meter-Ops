@@ -86,6 +86,34 @@ portal.
 
 ---
 
+## Deploy a public URL
+
+`render.yaml` describes a Render blueprint: free web service, Python 3.12,
+bound to `0.0.0.0:$PORT`, health check on `/health`.
+
+1. Sign in to Render with GitHub and choose **New → Blueprint**, then pick this
+   repository.
+2. Render asks for `PORTAL_EMAIL` and `PORTAL_PASSWORD` (declared with
+   `sync: false`). It generates `API_KEY` itself; copy the value from the
+   service's Environment tab.
+3. Open `https://<service>.onrender.com/` and paste the key when the dashboard
+   asks. It is kept in `localStorage`.
+
+The API key is mandatory in this setup because the URL is public and the
+service proxies a portal holding real credentials. Remove `API_KEY` from the
+environment only for a throwaway demo.
+
+Free instances sleep after 15 minutes without traffic; the next request takes
+about 50 seconds to wake.
+
+For a temporary link with no account, tunnel the local server instead:
+
+```bash
+cloudflared tunnel --url http://localhost:8000
+```
+
+---
+
 ## Configuration
 
 Configuration is read from the environment and `.env` via
@@ -375,6 +403,7 @@ tests/
   test_cache.py       TTL, stale fallback and single-flight concurrency
 PROTOCOL.md           Reconnaissance write-up
 openapi.json          Committed OpenAPI 3.1 contract
+render.yaml           Render blueprint for the public deployment
 REFLECTION.md         Assumptions, difficult parts, mistakes, self-critique
 ```
 

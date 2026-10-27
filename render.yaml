@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: urja-meter-ops
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.10"
+      - key: PORTAL_BASE_URL
+        value: https://urja-ops.flockenergy.tech
+      - key: PORTAL_TIMEZONE
+        value: Asia/Kolkata
+      - key: PORTAL_EMAIL
+        sync: false
+      - key: PORTAL_PASSWORD
+        sync: false
+      # Generated on first deploy; the dashboard asks for it once and stores it
+      # locally. Set it yourself to share a fixed link.
+      - key: API_KEY
+        generateValue: true
